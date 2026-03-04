@@ -1,5 +1,18 @@
 <p align="center"><img src="https://raw.githubusercontent.com/facebook/zstd/dev/doc/images/zstd_logo86.png" alt="Zstandard"></p>
 
+# zstdz — Zig-enabled fork of Zstandard
+
+[![Garnix](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Fgarnix.io%2Fapi%2Fbadges%2Fpmarreck%2Fzstdz%3Fbranch%3Dyolo)](https://garnix.io/repo/pmarreck/zstdz)
+[![CI](https://github.com/pmarreck/zstdz/actions/workflows/ci.yml/badge.svg?branch=yolo)](https://github.com/pmarreck/zstdz/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-BSD-blue.svg)](LICENSE)
+
+> **This is a Zig-enabled fork** of Facebook's [zstd](https://github.com/facebook/zstd) compression library.
+> It adds `build.zig` / `build.zig.zon` so you can use zstd as a native Zig dependency,
+> plus a `flake.nix` for hermetic Nix builds. All original upstream code, licenses, and
+> attributions are preserved — see [LICENSE](LICENSE) (BSD) and [COPYING](COPYING) (GPLv2).
+
+---
+
 __Zstandard__, or `zstd` as short version, is a fast lossless compression algorithm,
 targeting real-time compression scenarios at zlib-level and better compression ratios.
 It's backed by a very fast entropy stage, provided by [Huff0 and FSE library](https://github.com/Cyan4973/FiniteStateEntropy).
@@ -10,7 +23,7 @@ and a command line utility producing and decoding `.zst`, `.gz`, `.xz` and `.lz4
 Should your project require another programming language,
 a list of known ports and bindings is provided on [Zstandard homepage](https://facebook.github.io/zstd/#other-languages).
 
-**Development branch status:**
+**Upstream CI status:**
 
 [![Build Status][travisDevBadge]][travisLink]
 [![Build status][CircleDevBadge]][CircleLink]

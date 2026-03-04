@@ -1,0 +1,16 @@
+.{
+    .name = .zstdz,
+    .version = "1.6.0",
+    .minimum_zig_version = "0.15.0",
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "lib",
+        "src",
+        "examples",
+        "LICENSE",
+        "COPYING",
+        "README.md",
+    },
+    .fingerprint = 0xee73f60ccea335c8,
+}

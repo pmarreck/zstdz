@@ -62,3 +62,15 @@ compile_commands.json
 .clangd
 perf.data
 perf.data.old
+AGENTS.md
+ZIG_RECENT_API_CHANGES.md
+CLAUDE.md
+
+# Zig build artefacts
+.zig-cache/
+zig-out/
+.build/
+
+# Nix
+result
+result-*
