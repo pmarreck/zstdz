@@ -75,3 +75,4 @@ zig-out/
 # Nix
 result
 result-*
+.direnv/
