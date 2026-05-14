@@ -64,6 +64,7 @@ perf.data
 perf.data.old
 AGENTS.md
 ZIG_RECENT_API_CHANGES.md
+ZIG_0.15_TO_0.16_MIGRATION.md
 CLAUDE.md
 
 # Zig build artefacts
