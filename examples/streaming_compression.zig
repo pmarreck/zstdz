@@ -2,10 +2,10 @@ const std = @import("std");
 const zstd = @import("zstd");
 const common = @import("common.zig");
 
-pub fn main() !void {
+pub fn main(init: std.process.Init) !void {
     const allocator = std.heap.c_allocator;
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
+    const io = init.io;
+    const args = try init.minimal.args.toSlice(init.arena.allocator());
 
     if (args.len < 2) {
         std.debug.print("wrong arguments\nusage:\n{s} FILE [LEVEL] [THREADS]\n", .{args[0]});
@@ -27,11 +27,11 @@ pub fn main() !void {
 
     std.debug.print("Starting compression of {s} with level {d}, using {d} threads\n", .{ input_filename, cLevel, nbThreads });
 
-    const fin = try std.fs.cwd().openFile(input_filename, .{});
-    defer fin.close();
+    const fin = try std.Io.Dir.cwd().openFile(io, input_filename, .{});
+    defer fin.close(io);
 
-    const fout = try std.fs.cwd().createFile(out_filename, .{});
-    defer fout.close();
+    const fout = try std.Io.Dir.cwd().createFile(io, out_filename, .{});
+    defer fout.close(io);
 
     const buffInSize = zstd.c.ZSTD_CStreamInSize();
     const buffIn = try allocator.alloc(u8, buffInSize);
@@ -51,11 +51,8 @@ pub fn main() !void {
         _ = zstd.c.ZSTD_CCtx_setParameter(cctx, zstd.c.ZSTD_c_nbWorkers, nbThreads);
     }
 
-    // var r = fin.reader();
-    // var w = fout.writer();
-
     while (true) {
-        const read = try fin.read(buffIn);
+        const read = try fin.readStreaming(io, &.{buffIn});
 
         const lastChunk = (read < buffInSize);
         const mode: zstd.c.ZSTD_EndDirective = if (lastChunk) zstd.c.ZSTD_e_end else zstd.c.ZSTD_e_continue;
@@ -80,7 +77,7 @@ pub fn main() !void {
                 return error.CompressionFailed;
             }
 
-            try fout.writeAll(buffOut[0..output.pos]);
+            try fout.writeStreamingAll(io, buffOut[0..output.pos]);
 
             finished = if (lastChunk) (remaining == 0) else (input.pos == input.size);
         }
@@ -88,6 +85,3 @@ pub fn main() !void {
         if (lastChunk) break;
     }
 }
-
-
-

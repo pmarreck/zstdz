@@ -2,10 +2,10 @@ const std = @import("std");
 const zstd = @import("zstd");
 const common = @import("common.zig");
 
-pub fn main() !void {
+pub fn main(init: std.process.Init) !void {
     const allocator = std.heap.c_allocator;
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
+    const io = init.io;
+    const args = try init.minimal.args.toSlice(init.arena.allocator());
 
     if (args.len < 2) {
         std.debug.print("wrong arguments\nusage:\n{s} FILE(s)\n", .{args[0]});
@@ -17,9 +17,9 @@ pub fn main() !void {
 
     var i: usize = 1;
     while (i < args.len) : (i += 1) {
-        const file = try std.fs.cwd().openFile(args[i], .{});
-        const stat = try file.stat();
-        file.close();
+        const file = try std.Io.Dir.cwd().openFile(io, args[i], .{});
+        const stat = try file.stat(io);
+        file.close(io);
 
         if (stat.size > max_file_size) max_file_size = @intCast(stat.size);
     }
@@ -43,9 +43,13 @@ pub fn main() !void {
         const input_filename = args[i];
 
         // Load file into shared buffer
-        const file = try std.fs.cwd().openFile(input_filename, .{});
-        const f_size = try file.readAll(f_buffer);
-        file.close();
+        const file = try std.Io.Dir.cwd().openFile(io, input_filename, .{});
+        const stat = try file.stat(io);
+        const f_size: usize = @intCast(stat.size);
+        var read_buf: [4096]u8 = undefined;
+        var file_reader = file.reader(io, &read_buf);
+        try file_reader.interface.readSliceAll(f_buffer[0..f_size]);
+        file.close(io);
 
         // Compress
         const cSize = zstd.c.ZSTD_compressCCtx(cctx, c_buffer.ptr, c_buffer_size, f_buffer.ptr, f_size, 1);
@@ -56,7 +60,7 @@ pub fn main() !void {
 
         const out_filename = try common.createOutFilename(allocator, input_filename);
         defer allocator.free(out_filename);
-        try common.writeFile(out_filename, c_buffer[0..cSize]);
+        try common.writeFile(io, out_filename, c_buffer[0..cSize]);
 
         std.debug.print("{s} : {d} -> {d} - {s} \n", .{
             input_filename,
@@ -68,6 +72,3 @@ pub fn main() !void {
 
     std.debug.print("compressed {d} files \n", .{args.len - 1});
 }
-
-
-

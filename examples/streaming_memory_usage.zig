@@ -1,10 +1,8 @@
 const std = @import("std");
 const zstd = @import("zstd");
 
-pub fn main() !void {
-    const allocator = std.heap.c_allocator;
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
+pub fn main(init: std.process.Init) !void {
+    const args = try init.minimal.args.toSlice(init.arena.allocator());
 
     std.debug.print("\n Zstandard (v{s}) memory usage for streaming : \n\n", .{zstd.c.ZSTD_versionString()});
 

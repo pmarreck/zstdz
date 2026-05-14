@@ -2,10 +2,10 @@ const std = @import("std");
 const zstd = @import("zstd");
 const common = @import("common.zig");
 
-pub fn main() !void {
+pub fn main(init: std.process.Init) !void {
     const allocator = std.heap.c_allocator;
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
+    const io = init.io;
+    const args = try init.minimal.args.toSlice(init.arena.allocator());
 
     if (args.len != 2) {
         std.debug.print("wrong arguments\nusage:\n{s} FILE\n", .{args[0]});
@@ -13,7 +13,7 @@ pub fn main() !void {
     }
 
     const input_filename = args[1];
-    const input_data = try common.readFile(allocator, input_filename);
+    const input_data = try common.readFile(io, allocator, input_filename);
     defer allocator.free(input_data);
 
     const dest_size = zstd.c.ZSTD_compressBound(input_data.len);
@@ -28,7 +28,7 @@ pub fn main() !void {
 
     const out_filename = try common.createOutFilename(allocator, input_filename);
     defer allocator.free(out_filename);
-    try common.writeFile(out_filename, dest_buffer[0..cSize]);
+    try common.writeFile(io, out_filename, dest_buffer[0..cSize]);
 
     std.debug.print("{s} : {d} -> {d} - {s}\n", .{
         input_filename,
@@ -37,6 +37,3 @@ pub fn main() !void {
         out_filename,
     });
 }
-
-
-

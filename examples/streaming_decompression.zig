@@ -2,10 +2,10 @@ const std = @import("std");
 const zstd = @import("zstd");
 const common = @import("common.zig");
 
-pub fn main() !void {
+pub fn main(init: std.process.Init) !void {
     const allocator = std.heap.c_allocator;
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
+    const io = init.io;
+    const args = try init.minimal.args.toSlice(init.arena.allocator());
 
     if (args.len != 2) {
         std.debug.print("wrong arguments\nusage:\n{s} FILE\n", .{args[0]});
@@ -14,11 +14,8 @@ pub fn main() !void {
 
     const input_filename = args[1];
 
-    const fin = try std.fs.cwd().openFile(input_filename, .{});
-    defer fin.close();
-
-    // Write to stdout (std.io.getStdOut() is missing in 0.15?, using debug print as fallback)
-    // const stdout = std.io.getStdOut().writer();
+    const fin = try std.Io.Dir.cwd().openFile(io, input_filename, .{});
+    defer fin.close(io);
 
     const buffInSize = zstd.c.ZSTD_DStreamInSize();
     const buffIn = try allocator.alloc(u8, buffInSize);
@@ -32,10 +29,8 @@ pub fn main() !void {
     if (dctx == null) return error.ZstdCreateDCtxFailed;
     defer _ = zstd.c.ZSTD_freeDCtx(dctx);
 
-    // var r = fin.reader();
-
     while (true) {
-        const read = try fin.read(buffIn);
+        const read = try fin.readStreaming(io, &.{buffIn});
         if (read == 0) break;
 
         var input = zstd.c.ZSTD_inBuffer{
@@ -57,11 +52,7 @@ pub fn main() !void {
                 return error.DecompressionFailed;
             }
 
-            // try stdout.writeAll(buffOut[0..output.pos]);
             std.debug.print("{s}", .{buffOut[0..output.pos]});
         }
     }
 }
-
-
-

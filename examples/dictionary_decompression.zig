@@ -2,10 +2,10 @@ const std = @import("std");
 const zstd = @import("zstd");
 const common = @import("common.zig");
 
-pub fn main() !void {
+pub fn main(init: std.process.Init) !void {
     const allocator = std.heap.c_allocator;
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
+    const io = init.io;
+    const args = try init.minimal.args.toSlice(init.arena.allocator());
 
     if (args.len < 3) {
         std.debug.print("wrong arguments\nusage:\n{s} [FILES] dictionary\n", .{args[0]});
@@ -15,7 +15,7 @@ pub fn main() !void {
     const dict_filename = args[args.len - 1];
     std.debug.print("loading dictionary {s} \n", .{dict_filename});
 
-    const dict_buffer = try common.readFile(allocator, dict_filename);
+    const dict_buffer = try common.readFile(io, allocator, dict_filename);
     defer allocator.free(dict_buffer);
 
     const ddict = zstd.c.ZSTD_createDDict(dict_buffer.ptr, dict_buffer.len);
@@ -39,7 +39,7 @@ pub fn main() !void {
     var i: usize = 1;
     while (i < args.len - 1) : (i += 1) {
         const input_filename = args[i];
-        const input_data = try common.readFile(allocator, input_filename);
+        const input_data = try common.readFile(io, allocator, input_filename);
         defer allocator.free(input_data);
 
         const content_size = zstd.c.ZSTD_getFrameContentSize(input_data.ptr, input_data.len);
