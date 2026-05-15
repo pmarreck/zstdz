@@ -157,6 +157,7 @@ pub fn build(b: *std.Build) void {
                     .root_source_file = b.path(ex.src),
                     .target = target,
                     .optimize = optimize,
+                    .link_libc = true,
                 }),
             });
             exe.root_module.addImport("zstd", zstd_module);
@@ -188,6 +189,7 @@ pub fn build(b: *std.Build) void {
                 .root_source_file = b.path("examples/simple_compression.zig"),
                 .target = target,
                 .optimize = optimize,
+                .link_libc = true,
             }),
         });
         simple_compression_exe.root_module.addImport("zstd", zstd_module);
@@ -203,6 +205,7 @@ pub fn build(b: *std.Build) void {
                 .root_source_file = b.path("examples/simple_decompression.zig"),
                 .target = target,
                 .optimize = optimize,
+                .link_libc = true,
             }),
         });
         simple_decompression_exe.root_module.addImport("zstd", zstd_module);
@@ -223,6 +226,7 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/zstd.zig"),
             .target = target,
             .optimize = optimize,
+            .link_libc = true,
         }),
         .linkage = .static,
     });
