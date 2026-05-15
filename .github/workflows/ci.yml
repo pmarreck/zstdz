@@ -21,7 +21,7 @@ jobs:
 
       - uses: mlugg/setup-zig@v2
         with:
-          version: 0.15.2
+          version: 0.16.0
 
       - name: Build library
         run: zig build -Doptimize=ReleaseFast
@@ -42,7 +42,7 @@ jobs:
 
       - uses: mlugg/setup-zig@v2
         with:
-          version: 0.15.2
+          version: 0.16.0
 
       - name: Cross-compile for ${{ matrix.target }}
         run: zig build -Doptimize=ReleaseFast -Dtarget=${{ matrix.target }}
