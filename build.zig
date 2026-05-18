@@ -183,6 +183,11 @@ pub fn build(b: *std.Build) void {
     const test_step = b.step("test", "Run smoke tests using examples");
 
     if (!is_freestanding) {
+        // Build_tests step lets nix/CI build the test executables without
+        // running them, so the binaries can be patchelf'd (Zig links the
+        // FHS dynamic linker which doesn't exist in the Nix sandbox).
+        const build_tests_step = b.step("build_tests", "Build smoke-test executables without running them");
+
         const simple_compression_exe = b.addExecutable(.{
             .name = "test_simple_compression",
             .root_module = b.createModule(.{
@@ -195,8 +200,12 @@ pub fn build(b: *std.Build) void {
         simple_compression_exe.root_module.addImport("zstd", zstd_module);
         simple_compression_exe.root_module.linkLibrary(zstd_lib);
 
+        const install_compress = b.addInstallArtifact(simple_compression_exe, .{});
+        build_tests_step.dependOn(&install_compress.step);
+
         const run_compress = b.addRunArtifact(simple_compression_exe);
         run_compress.addArgs(&.{"README.md"});
+        run_compress.step.dependOn(&install_compress.step);
         test_step.dependOn(&run_compress.step);
 
         const simple_decompression_exe = b.addExecutable(.{
@@ -211,9 +220,13 @@ pub fn build(b: *std.Build) void {
         simple_decompression_exe.root_module.addImport("zstd", zstd_module);
         simple_decompression_exe.root_module.linkLibrary(zstd_lib);
 
+        const install_decompress = b.addInstallArtifact(simple_decompression_exe, .{});
+        build_tests_step.dependOn(&install_decompress.step);
+
         const run_decompress = b.addRunArtifact(simple_decompression_exe);
         run_decompress.addArgs(&.{"README.md.zst"});
         run_decompress.step.dependOn(&run_compress.step);
+        run_decompress.step.dependOn(&install_decompress.step);
         test_step.dependOn(&run_decompress.step);
     }
 

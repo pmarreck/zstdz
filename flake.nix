@@ -44,14 +44,30 @@
           version = "1.6.0";
           src = ./.;
 
-          nativeBuildInputs = [ zig ];
+          nativeBuildInputs = [ zig ] ++ pkgs.lib.optionals pkgs.stdenv.isLinux [ pkgs.patchelf ];
 
           dontUseCmakeConfigure = true;
           dontUseZigBuild = true;
 
           buildPhase = ''
-            export ZIG_GLOBAL_CACHE_DIR=$(mktemp -d)
-            zig build test -Doptimize=ReleaseFast
+            export ZIG_CACHE=$(mktemp -d)
+            export ZIG_GLOBAL_CACHE_DIR=$ZIG_CACHE
+            export ZIG_LOCAL_CACHE_DIR=$ZIG_CACHE/local
+            mkdir -p $ZIG_LOCAL_CACHE_DIR
+
+            # First, build everything without running tests so the test_*
+            # artifacts land in .zig-cache. Then patchelf them so the FHS
+            # interpreter path doesn't break exec inside the Nix sandbox.
+            # Finally, re-run `zig build test` which reuses the cached and
+            # now-patched binaries.
+            zig build build_tests -Doptimize=ReleaseFast --cache-dir $ZIG_LOCAL_CACHE_DIR
+            ${pkgs.lib.optionalString pkgs.stdenv.isLinux ''
+            DL="$(cat ${pkgs.stdenv.cc}/nix-support/dynamic-linker)"
+            for f in $(find $ZIG_LOCAL_CACHE_DIR -type f -perm -u+x -name 'test_*'); do
+              patchelf --set-interpreter "$DL" "$f" 2>/dev/null || true
+            done
+            ''}
+            zig build test -Doptimize=ReleaseFast --cache-dir $ZIG_LOCAL_CACHE_DIR
           '';
 
           installPhase = ''
