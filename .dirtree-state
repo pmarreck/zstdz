@@ -1,0 +1,6 @@
+# Dirtree: Stateful directory trees in the CLI for humans and LLMs. https://github.com/pmarreck/dirtree
+ver=1.2
+annotate=[
+	examples/corrupt_decompression.zig = Corrupt-input regression fence: streaming-decompresses each arg, requires clean ZSTD error (never a crash); wired as test_corrupt_decompression
+	tests/golden-decompression-errors = Corrupt .zst fixtures that must be rejected cleanly; sample_corrupt_{1..5}.zst are the 2026-07-06 SIGILL repro corpus from validate_gui
+]

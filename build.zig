@@ -228,6 +228,37 @@ pub fn build(b: *std.Build) void {
         run_decompress.step.dependOn(&run_compress.step);
         run_decompress.step.dependOn(&install_decompress.step);
         test_step.dependOn(&run_decompress.step);
+
+        // Corrupt-input fence: malformed frames must return clean ZSTD errors,
+        // never trap (see examples/corrupt_decompression.zig for history).
+        const corrupt_decompression_exe = b.addExecutable(.{
+            .name = "test_corrupt_decompression",
+            .root_module = b.createModule(.{
+                .root_source_file = b.path("examples/corrupt_decompression.zig"),
+                .target = target,
+                .optimize = optimize,
+                .link_libc = true,
+            }),
+        });
+        corrupt_decompression_exe.root_module.addImport("zstd", zstd_module);
+        corrupt_decompression_exe.root_module.linkLibrary(zstd_lib);
+
+        const install_corrupt = b.addInstallArtifact(corrupt_decompression_exe, .{});
+        build_tests_step.dependOn(&install_corrupt.step);
+
+        const run_corrupt = b.addRunArtifact(corrupt_decompression_exe);
+        run_corrupt.addArgs(&.{
+            "tests/golden-decompression-errors/off0.bin.zst",
+            "tests/golden-decompression-errors/truncated_huff_state.zst",
+            "tests/golden-decompression-errors/zeroSeq_extraneous.zst",
+            "tests/golden-decompression-errors/sample_corrupt_1.zst",
+            "tests/golden-decompression-errors/sample_corrupt_2.zst",
+            "tests/golden-decompression-errors/sample_corrupt_3.zst",
+            "tests/golden-decompression-errors/sample_corrupt_4.zst",
+            "tests/golden-decompression-errors/sample_corrupt_5.zst",
+        });
+        run_corrupt.step.dependOn(&install_corrupt.step);
+        test_step.dependOn(&run_corrupt.step);
     }
 
     // Docs step
