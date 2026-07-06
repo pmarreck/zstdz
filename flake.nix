@@ -84,18 +84,42 @@
         } // pkgs.lib.optionalAttrs (pkgs.stdenv.isLinux && pkgs.stdenv.hostPlatform.isx86_64) {
           # MFIC control: the shipped static lib must execute on baseline
           # x86-64. Zig's default native-CPU detection inside a Nix build
-          # bakes the *builder's* ISA into a cache-shared artifact — the
-          # Garnix builder's AVX-512 SIGILLed a Zen 2 consumer the moment a
-          # corrupt frame routed into HUF table parsing (2026-07-06). The
-          # hand-written BMI2 asm (huf_decompress_amd64.S) is runtime-
-          # dispatched and allowed; compiler-emitted AVX/AVX-512
-          # (ymm/zmm/mask registers) is not.
+          # bakes the *builder's* ISA into a cache-shared artifact — a
+          # builder's AVX-512 SIGILLed a Zen 2 consumer the moment a corrupt
+          # frame routed into HUF table parsing (2026-07-06).
+          #
+          # Platform-agnostic SIMD/ISA-extension semantics ARE permitted —
+          # but only via runtime dispatch: symbols matching the allowlist
+          # below (zstd's DYNAMIC_BMI2 family: target-attributed C compiled
+          # for lzcnt/bmi/bmi2, plus cpuid-guarded hand-written asm) may use
+          # any extension, because they are only reachable behind a runtime
+          # CPU-feature check. Everywhere else the artifact must be pure
+          # baseline: no vector extensions (ymm/zmm/opmask registers) and no
+          # post-baseline scalar mnemonics. tzcnt is globally permitted: its
+          # rep-bsf encoding executes as bsf on pre-BMI1 CPUs and compilers
+          # only emit it where that fallback is correct. Extending the
+          # allowlist requires the new symbol to be provably runtime-
+          # dispatched — review its call sites before blessing it.
           isa-baseline = pkgs.runCommand "zstdz-isa-baseline-check" {
             nativeBuildInputs = [ pkgs.binutils ];
           } ''
             objdump -d ${self.packages.${system}.default}/lib/libzstd.a > disassembly.txt
-            if grep -nE '%(ymm|zmm|k[0-7])' disassembly.txt > violations.txt; then
-              echo "FAIL: libzstd.a contains instructions beyond the baseline x86-64 ISA:" >&2
+            awk -v ALLOW='(_bmi2|_fast_asm_loop|_fast_c_loop)$|^HUF_decompress4X[12]_usingDTable_internal_fast$' '
+              /^[0-9a-f]+ <.*>:$/ { fn = substr($2, 2, length($2)-3); next }
+              {
+                n = split($0, parts, "\t")
+                if (n < 3) next
+                if (ALLOW != "" && fn ~ ALLOW) next
+                split(parts[3], w, " ")
+                m = w[1]
+                if (parts[3] ~ /%(ymm|zmm|k[0-7])/ ||
+                    m ~ /^(shrx|shlx|sarx|andn|bzhi|pdep|pext|mulx|rorx|lzcnt|popcnt|movbe|crc32|aesenc|aesenclast|aesdec|aesdeclast|aesimc|aeskeygenassist|pclmulqdq)$/) {
+                  print fn ": " parts[3]
+                }
+              }
+            ' disassembly.txt > violations.txt
+            if [ -s violations.txt ]; then
+              echo "FAIL: non-baseline instructions outside runtime-dispatched symbols:" >&2
               head -20 violations.txt >&2
               echo "(total: $(wc -l < violations.txt) offending lines)" >&2
               exit 1
