@@ -11,7 +11,7 @@
   };
 
   outputs = { self, nixpkgs, flake-utils, zig-overlay }:
-    flake-utils.lib.eachDefaultSystem (system:
+    flake-utils.lib.eachSystem [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" ] (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
         zig = zig-overlay.packages.${system}."0.16.0";
@@ -50,7 +50,7 @@
             version = "1.6.0";
             src = ./.;
 
-            nativeBuildInputs = [ zig ] ++ pkgs.lib.optionals pkgs.stdenv.isLinux [ pkgs.patchelf ];
+            nativeBuildInputs = [ zig ] ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [ pkgs.patchelf ];
 
             dontUseCmakeConfigure = true;
             dontUseZigBuild = true;
@@ -67,7 +67,7 @@
               # Finally, re-run `zig build test` which reuses the cached and
               # now-patched binaries.
               zig build build_tests -Doptimize=ReleaseFast -Dcpu=baseline --cache-dir $ZIG_LOCAL_CACHE_DIR
-              ${pkgs.lib.optionalString pkgs.stdenv.isLinux ''
+              ${pkgs.lib.optionalString pkgs.stdenv.hostPlatform.isLinux ''
               DL="$(cat ${pkgs.stdenv.cc}/nix-support/dynamic-linker)"
               for f in $(find $ZIG_LOCAL_CACHE_DIR -type f -perm -u+x -name 'test_*'); do
                 patchelf --set-interpreter "$DL" "$f" 2>/dev/null || true
@@ -81,7 +81,7 @@
               echo "tests passed" > $out/result
             '';
           };
-        } // pkgs.lib.optionalAttrs (pkgs.stdenv.isLinux && pkgs.stdenv.hostPlatform.isx86_64) {
+        } // pkgs.lib.optionalAttrs (pkgs.stdenv.hostPlatform.isLinux && pkgs.stdenv.hostPlatform.isx86_64) {
           # MFIC control: the shipped static lib must execute on baseline
           # x86-64. Zig's default native-CPU detection inside a Nix build
           # bakes the *builder's* ISA into a cache-shared artifact — a
@@ -131,6 +131,7 @@
         devShells.default = pkgs.mkShell {
           buildInputs = [
             zig
+            pkgs.python3 # Upstream CLI test runner.
           ];
         };
       }

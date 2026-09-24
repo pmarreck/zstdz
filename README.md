@@ -2,7 +2,7 @@
 
 # zstdz — Zig-enabled fork of Zstandard
 
-[![Garnix](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Fgarnix.io%2Fapi%2Fbadges%2Fpmarreck%2Fzstdz%3Fbranch%3Dyolo)](https://garnix.io/repo/pmarreck/zstdz)
+[![Mechatron Prime CI](https://img.shields.io/endpoint?url=https%3A%2F%2Fthelio-nixos.tail66c90.ts.net%2Fbadges%2Fzstdz.json&style=for-the-badge)](https://thelio-nixos.tail66c90.ts.net/mechatron-prime/)
 [![CI](https://github.com/pmarreck/zstdz/actions/workflows/ci.yml/badge.svg?branch=yolo)](https://github.com/pmarreck/zstdz/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-BSD-blue.svg)](LICENSE)
 
@@ -10,6 +10,9 @@
 > It adds `build.zig` / `build.zig.zon` so you can use zstd as a native Zig dependency,
 > plus a `flake.nix` for hermetic Nix builds. All original upstream code, licenses, and
 > attributions are preserved — see [LICENSE](LICENSE) (BSD) and [COPYING](COPYING) (GPLv2).
+
+Upstream is synchronized through [`facebook/zstd@01b7154f`](https://github.com/facebook/zstd/commit/01b7154f1172432f8abe9b3bb9909e14a1176b7d) (`dev`, checked 2026-09-24).
+The Nix flake supports x86_64-linux, aarch64-linux, and aarch64-darwin with Zig 0.16.0.
 
 ---
 

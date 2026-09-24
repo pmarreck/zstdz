@@ -44,8 +44,12 @@ CPPFLAGS   += -I$(LIB_SRCDIR) -I$(LIB_SRCDIR)/common -I$(LIB_SRCDIR)/compress -I
 ZSTDCOMMON_FILES := $(sort $(ZSTD_COMMON_FILES))
 ZSTDCOMP_FILES   := $(sort $(ZSTD_COMPRESS_FILES))
 ZSTDDECOMP_FILES := $(sort $(ZSTD_DECOMPRESS_FILES))
-ZSTDLEGACY_FILES := $(sort $(wildcard $(LIB_SRCDIR)/legacy/*.c))
-ZSTD_FILES  := $(ZSTDDECOMP_FILES) $(ZSTDCOMMON_FILES) $(ZSTDCOMP_FILES) $(ZSTDLEGACY_FILES)
+# every decoder, whatever ZSTD_LEGACY_SUPPORT : only the `legacy` target wants these
+ALL_LEGACY_FILES := $(sort $(wildcard $(LIB_SRCDIR)/legacy/*.c))
+# ZSTD_LEGACY_FILES (from libzstd.mk) is the subset selected for the requested
+# level. It's empty when legacy support is disabled, hence unreachable decoders
+# are not compiled into the test binaries.
+ZSTD_FILES  := $(ZSTDDECOMP_FILES) $(ZSTDCOMMON_FILES) $(ZSTDCOMP_FILES) $(sort $(ZSTD_LEGACY_FILES))
 ZDICT_FILES := $(sort $(ZSTD_DICTBUILDER_FILES))
 
 ZSTD_F1 := $(sort $(wildcard $(ZSTD_FILES)))
@@ -233,8 +237,11 @@ CLEAN += invalidDictionaries
 invalidDictionaries : $(ZSTD_OBJECTS) invalidDictionaries.c
 
 CLEAN += legacy
-legacy : CPPFLAGS += -UZSTD_LEGACY_SUPPORT -DZSTD_LEGACY_SUPPORT=4
-legacy : $(ZSTD_FILES) legacy.c
+# legacy.c adapts to the level it is compiled with : it only tests the frames
+# this level can decode. Default to the oldest format, to cover all decoders.
+LEGACY_TEST_LEVEL ?= 1
+legacy : CPPFLAGS += -UZSTD_LEGACY_SUPPORT -DZSTD_LEGACY_SUPPORT=$(LEGACY_TEST_LEVEL)
+legacy : $(ZSTD_FILES) $(ALL_LEGACY_FILES) legacy.c
 
 CLEAN += decodecorpus
 decodecorpus : LDLIBS += -lm
@@ -281,7 +288,7 @@ test-valgrind: VALGRIND = valgrind --leak-check=full --show-leak-kinds=all --err
 test-valgrind: zstd datagen fuzzer fullbench
 	@echo "\n ---- valgrind tests : memory analyzer ----"
 	$(VALGRIND) ./datagen -g50M > $(VOID)
-	$(VALGRIND) $(PRGDIR)/zstd ; if [ $$? -eq 0 ] ; then echo "zstd without argument should have failed"; false; fi
+	$(VALGRIND) $(PRGDIR)/zstd --fake-stdin-is-console ; if [ $$? -eq 0 ] ; then echo "zstd without argument should have failed"; false; fi
 	./datagen -g80 | $(VALGRIND) $(PRGDIR)/zstd - -c > $(VOID)
 	./datagen -g16KB | $(VALGRIND) $(PRGDIR)/zstd -vf - -c > $(VOID)
 	./datagen -g2930KB | $(VALGRIND) $(PRGDIR)/zstd -5 -vf - -o tmp
