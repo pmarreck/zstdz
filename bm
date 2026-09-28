@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+exec nix develop -c bash bench/telemetry "$@"

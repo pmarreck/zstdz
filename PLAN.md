@@ -6,6 +6,8 @@ maintained_by: agent
 
 # PLAN
 
+- [x] Investigate corruption-location telemetry and record API tradeoffs and honest precision limits (done 2026-09-28 19:27 EDT; enclosing commit; context: doc/error_telemetry.md).
+- [x] Implement in-stream telemetry first per Peter's answer, test chunk boundaries and EOF against stock zstd, and measure enabled/unused overhead (done 2026-09-28 19:27 EDT; enclosing commit; context: doc/error_telemetry.md).
 - [x] Merge 77 upstream commits through facebook/zstd dev 01b7154f, preserving Zig packaging and baseline-CPU safeguards (done 2026-09-24 16:38 EDT; enclosing merge commit).
 - [x] Refresh flake inputs to 2026-09-24, drop unsupported Intel macOS, and pass Linux package, smoke, corrupt-input, ISA, upstream CLI, seeded compression/streaming, legacy, and ASan/UBSan checks (done 2026-09-24 16:38 EDT; enclosing merge commit).
 

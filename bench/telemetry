@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# Supply ReleaseFast baseline and current archive paths; retain timing evidence.
+set -u
+if [ "$#" -ne 3 ]; then
+ echo "usage: bench/telemetry BASELINE_ARCHIVE CURRENT_ARCHIVE RESULTS_JSON" >&2
+ exit 2
+fi
+baseline=$(realpath "$1")
+current=$(realpath "$2")
+results=$(realpath -m "$3")
+work=$(mktemp -d)
+# Keep artifacts beside the result for reproducibility instead of deleting them.
+printf '%s\n' "$work" > "$results.workdir"
+cc -O3 -DNDEBUG -Ilib bench/decode.c "$baseline" -pthread -o "$work/baseline" || exit
+cc -O3 -DNDEBUG -Ilib bench/decode.c "$current" -pthread -o "$work/current" || exit
+cc -O3 -DNDEBUG -DTELEMETRY_REPLAY -Ilib bench/decode.c "$current" -pthread -o "$work/replay" || exit
+cc -O3 -DNDEBUG -DTELEMETRY_STREAM -Ilib bench/decode.c "$current" -pthread -o "$work/stream" || exit
+python3 - "$work" <<'PY'
+import pathlib, random, sys
+root=pathlib.Path(sys.argv[1]); rng=random.Random(20260928)
+# Mixed repeated and random 4 KiB chunks, with a nontrivial compression ratio.
+chunks=[rng.randbytes(4096) for _ in range(128)]
+(root/'mixed').write_bytes(b''.join(chunks[rng.randrange(len(chunks))] for _ in range(2048)))
+(root/'repetitive').write_bytes((b'location telemetry for zstd frames\n'*262144))
+PY
+for corpus in mixed repetitive; do
+ zstd -q -f --check -3 "$work/$corpus" -o "$work/$corpus.zst" || exit
+ for mode in baseline current stream replay; do
+  "$work/$mode" "$work/$corpus.zst" 1 > "$work/$corpus-$mode.bytes" || exit
+ done
+ cmp "$work/$corpus-baseline.bytes" "$work/$corpus-current.bytes" || exit
+ cmp "$work/$corpus-baseline.bytes" "$work/$corpus-replay.bytes" || exit
+ cmp "$work/$corpus-baseline.bytes" "$work/$corpus-stream.bytes" || exit
+done
+hyperfine --warmup 3 --runs 12 --export-json "$results" \
+ --parameter-list corpus mixed,repetitive --parameter-list mode baseline,current,stream,replay \
+ "$work/{mode} $work/{corpus}.zst 100"

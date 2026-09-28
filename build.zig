@@ -115,6 +115,7 @@ pub fn build(b: *std.Build) void {
     zstd_lib.installHeader(b.path("lib/zstd.h"), "zstd.h");
     zstd_lib.installHeader(b.path("lib/zdict.h"), "zdict.h");
     zstd_lib.installHeader(b.path("lib/zstd_errors.h"), "zstd_errors.h");
+    zstd_lib.installHeader(b.path("lib/zstdz_errors.h"), "zstdz_errors.h");
 
     b.installArtifact(zstd_lib);
 
@@ -187,6 +188,24 @@ pub fn build(b: *std.Build) void {
         // running them, so the binaries can be patchelf'd (Zig links the
         // FHS dynamic linker which doesn't exist in the Nix sandbox).
         const build_tests_step = b.step("build_tests", "Build smoke-test executables without running them");
+
+        if (build_compression and build_decompression) {
+            const telemetry_test = b.addExecutable(.{
+                .name = "test_error_telemetry",
+                .root_module = b.createModule(.{
+                    .target = target,
+                    .optimize = optimize,
+                    .link_libc = true,
+                }),
+            });
+            telemetry_test.root_module.addCSourceFiles(.{ .files = &.{"tests/telemetry/test.c"}, .flags = &.{"-std=c99"} });
+            telemetry_test.root_module.addIncludePath(b.path("lib"));
+            telemetry_test.root_module.linkLibrary(zstd_lib);
+            const install_telemetry = b.addInstallArtifact(telemetry_test, .{});
+            build_tests_step.dependOn(&install_telemetry.step);
+            const run_telemetry = b.addRunArtifact(telemetry_test);
+            test_step.dependOn(&run_telemetry.step);
+        }
 
         const simple_compression_exe = b.addExecutable(.{
             .name = "test_simple_compression",
@@ -390,6 +409,7 @@ const compress_sources = [_][]const u8{
 };
 
 const decompress_sources = [_][]const u8{
+    "zstdz_errors.c",
     "huf_decompress.c",
     "zstd_ddict.c",
     "zstd_decompress.c",

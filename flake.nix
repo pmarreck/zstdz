@@ -50,7 +50,7 @@
             version = "1.6.0";
             src = ./.;
 
-            nativeBuildInputs = [ zig ] ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [ pkgs.patchelf ];
+            nativeBuildInputs = [ zig pkgs.python3 pkgs.zstd ] ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [ pkgs.patchelf ];
 
             dontUseCmakeConfigure = true;
             dontUseZigBuild = true;
@@ -72,8 +72,11 @@
               for f in $(find $ZIG_LOCAL_CACHE_DIR -type f -perm -u+x -name 'test_*'); do
                 patchelf --set-interpreter "$DL" "$f" 2>/dev/null || true
               done
+              patchelf --set-interpreter "$DL" zig-out/bin/test_error_telemetry
               ''}
               zig build test -Doptimize=ReleaseFast -Dcpu=baseline --cache-dir $ZIG_LOCAL_CACHE_DIR
+              python3 tests/telemetry/differential.py --diagnostic zig-out/bin/test_error_telemetry --oracle zstd
+              python3 tests/telemetry/differential.py --stream --diagnostic zig-out/bin/test_error_telemetry --oracle zstd
             '';
 
             installPhase = ''
@@ -132,6 +135,8 @@
           buildInputs = [
             zig
             pkgs.python3 # Upstream CLI test runner.
+            pkgs.hyperfine
+            pkgs.zstd # Independent CLI verdict oracle for telemetry tests.
           ];
         };
       }

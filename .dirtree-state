@@ -2,7 +2,14 @@
 ver=1.2
 annotate=[
 	.mechatron-prime/targets = Exact-commit CI targets: Linux package, smoke tests, and ISA baseline check
+	INTENT.md = Fork purpose, compatibility constraints, and corruption-telemetry scope
+	bench/telemetry = Reproducible baseline, unused, in-stream, and replay throughput measurement
+	bm = Nix entrypoint for the telemetry benchmark
+	doc/error_telemetry.md = Telemetry feasibility, API precision limits, and measured evidence
 	examples/corrupt_decompression.zig = Corrupt-input regression fence: streaming-decompresses each arg, requires clean ZSTD error (never a crash); wired as test_corrupt_decompression
 	lib/common/bmi2.h = Upstream BMI2 dispatch policy shared by compression and decompression
+	lib/decompress/zstdz_errors.c = Opt-in streaming frame/block telemetry with a replay convenience wrapper
+	lib/zstdz_errors.h = Experimental C ABI for bounded in-stream corruption diagnostics
 	tests/golden-decompression-errors = Corrupt .zst fixtures that must be rejected cleanly; sample_corrupt_{1..5}.zst are the 2026-07-06 SIGILL repro corpus from validate_gui
+	tests/telemetry = Structural telemetry tests and independent stock-zstd verdict comparison
 ]

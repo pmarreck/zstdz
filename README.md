@@ -14,6 +14,11 @@
 Upstream is synchronized through [`facebook/zstd@01b7154f`](https://github.com/facebook/zstd/commit/01b7154f1172432f8abe9b3bb9909e14a1176b7d) (`dev`, checked 2026-09-24).
 The Nix flake supports x86_64-linux, aarch64-linux, and aarch64-darwin with Zig 0.16.0.
 
+The experimental [in-stream telemetry API](doc/error_telemetry.md) reports
+frame/block failure ranges, checksum details, and truncation as data is decoded.
+It is opt-in; existing decoding APIs are unchanged. Internal entropy failures
+currently report a whole block, not an exact damaged byte.
+
 ---
 
 __Zstandard__, or `zstd` as short version, is a fast lossless compression algorithm,

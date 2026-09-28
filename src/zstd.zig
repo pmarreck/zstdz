@@ -3,4 +3,5 @@ pub const c = @cImport({
     @cInclude("zstd.h");
     @cInclude("zdict.h");
     @cInclude("zstd_errors.h");
+    @cInclude("zstdz_errors.h");
 });
